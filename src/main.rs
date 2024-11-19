@@ -24,12 +24,20 @@ struct MessageBody {
 fn main() {
     let stdin = io::stdin().lock();
 
+    let mut json_buf = String::from("");
     for line in stdin.lines() {
         match line {
-            Ok(content) => match serde_json::from_str::<Message>(&content) {
-                Ok(msg) => println!("{}", serde_json::to_string(&handle_message(msg)).unwrap()),
-                Err(err) => eprintln!("invalid json data for message: {}", err),
-            },
+            Ok(content) => {
+                if content.is_empty()  && !json_buf.is_empty() {
+                    match serde_json::from_str::<Message>(&json_buf) {
+                        Ok(msg) => println!("{}", serde_json::to_string(&handle_message(msg)).unwrap()),
+                        Err(err) => eprintln!("invalid json data for message: {}", err),
+                    }
+                    json_buf.clear();
+                } else if !content.is_empty() {
+                    json_buf += &content;
+                }
+            }
             Err(err) => eprintln!("Error reading line: {}", err),
         }
     }
