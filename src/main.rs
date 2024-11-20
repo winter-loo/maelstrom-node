@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use std::{io::{self, BufRead}, collections::HashMap};
+use uuid::Uuid;
 
 /// protocol specification from https://github.com/jepsen-io/maelstrom/blob/main/doc/protocol.md
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -78,6 +79,15 @@ fn handle_message(msg: Message) -> Message {
         res.dest = msg.src;
         res.body.type_ = "init_ok".to_string();
         res.body.in_reply_to = msg.body.msg_id;
+        return res;
+    } else if msg.body.type_ == "generate" {
+        let mut res = Message::default();
+
+        res.src = msg.dest;
+        res.dest = msg.src;
+        res.body.type_ = "generate_ok".to_string();
+        res.body.in_reply_to = msg.body.msg_id;
+        res.body.extra.insert("id".to_string(), Value::from(Uuid::new_v4().to_string()));
         return res;
     }
     panic!("unknown message type: {}", msg.body.type_);
