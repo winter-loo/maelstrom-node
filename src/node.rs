@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::messages::*;
 use uuid::Uuid;
 
@@ -5,6 +6,8 @@ use uuid::Uuid;
 pub struct Node {
     pub id: String,
     pub node_ids: Vec<String>,
+    pub topology: HashMap<String, Vec<String>>,
+    pub messages_seen: Vec<BroadcastValue>,
 }
 
 impl Node {
@@ -12,6 +15,8 @@ impl Node {
         Node {
             id: String::from(""),
             node_ids: Vec::new(),
+            topology: HashMap::new(),
+            messages_seen: Vec::new(),
         }
     }
 
@@ -25,6 +30,10 @@ impl Node {
                 payload: Payload::Empty,
             },
         };
+        res.body.in_reply_to = req.body.msg_id;
+        if let Some(msg_id) = req.body.msg_id {
+            res.body.msg_id = Some(msg_id + 1);
+        }
 
         match req.body.payload {
             Payload::Empty => {}
@@ -33,24 +42,40 @@ impl Node {
                 self.id = init.node_id;
                 self.node_ids = init.node_ids;
 
-                res.body.in_reply_to = req.body.msg_id;
                 res.body.payload = Payload::InitOk;
             }
             Payload::InitOk => {}
 
             Payload::Echo(payload) => {
-                res.body.in_reply_to = req.body.msg_id;
                 res.body.payload = Payload::EchoOk(EchoResponsePayload { echo: payload.echo });
             }
             Payload::EchoOk(_) => {}
 
             Payload::Generate => {
-                res.body.in_reply_to = req.body.msg_id;
                 res.body.payload = Payload::GenerateOk(GenerateResponsePayload {
                     id: Uuid::new_v4().to_string(),
                 });
             }
             Payload::GenerateOk(_) => {}
+
+            Payload::Topology(payload) => {
+                res.body.payload = Payload::TopologyOk;
+                self.topology = payload.topology;
+            }
+            Payload::TopologyOk => {},
+
+            Payload::Broadcast(payload) => {
+                res.body.payload = Payload::BroadcastOk;
+                self.messages_seen.push(payload.message);
+            }
+            Payload::BroadcastOk => {},
+
+            Payload::Read => {
+                res.body.payload = Payload::ReadOk(ReadResponsePayload{
+                    messages: self.messages_seen.clone(),
+                });
+            }
+            Payload::ReadOk(_) => {},
         }
 
         serde_json::to_string(&res).unwrap()

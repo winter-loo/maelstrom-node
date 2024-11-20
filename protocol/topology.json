@@ -1,0 +1,1 @@
+{ "src": "n1", "dest": "n2", "body": { "type": "topology", "topology": { "n1": ["n2", "n3"], "n2": ["n1"], "n3": ["n1"] } } }

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 /// protocol specification from https://github.com/jepsen-io/maelstrom/blob/main/doc/protocol.md
@@ -34,6 +35,12 @@ pub enum Payload {
     EchoOk(EchoResponsePayload),
     Generate,
     GenerateOk(GenerateResponsePayload),
+    Topology(TopologyRequestPayload),
+    TopologyOk,
+    Broadcast(BroadcastRequestPayload),
+    BroadcastOk,
+    Read,
+    ReadOk(ReadResponsePayload),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -55,4 +62,21 @@ pub struct InitRequestPayload {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct GenerateResponsePayload {
     pub id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct TopologyRequestPayload {
+    pub topology: HashMap<String, Vec<String>>,
+}
+
+pub type BroadcastValue = u64;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct BroadcastRequestPayload {
+    pub message: BroadcastValue,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct ReadResponsePayload {
+    pub messages: Vec<BroadcastValue>,
 }
