@@ -20,7 +20,7 @@ impl Node {
         }
     }
 
-    pub fn handle_message(&mut self, req: Message) -> String {
+    pub fn handle_message(&mut self, req: Message) -> Message {
         let mut res = Message {
             src: req.dest,
             dest: req.src,
@@ -67,6 +67,19 @@ impl Node {
             Payload::Broadcast(payload) => {
                 res.body.payload = Payload::BroadcastOk;
                 self.messages_seen.push(payload.message);
+
+                for neibor in self.topology.get(&self.id).unwrap() {
+                    let my_req = Message {
+                        src: self.id.clone(),
+                        dest: neibor.clone(),
+                        body: MessageBody {
+                            msg_id: Some(1),
+                            in_reply_to: None,
+                            payload: Payload::Broadcast(payload.clone()),
+                        }
+                    };
+                    self.send(my_req);
+                }
             }
             Payload::BroadcastOk => {},
 
@@ -78,6 +91,10 @@ impl Node {
             Payload::ReadOk(_) => {},
         }
 
-        serde_json::to_string(&res).unwrap()
+        res
+    }
+
+    pub fn send(&self, req: Message) {
+        println!("{}", serde_json::to_string(&req).unwrap());
     }
 }

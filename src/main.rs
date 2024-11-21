@@ -18,7 +18,10 @@ fn main() {
                     continue;
                 }
                 match serde_json::from_str::<Message>(&content) {
-                    Ok(msg) => println!("{}", node.handle_message(msg)),
+                    Ok(msg) => {
+                        let response = node.handle_message(msg);
+                        node.send(response);
+                    }
                     Err(err) => eprintln!("invalid json data for message: {}", err),
                 }
             }

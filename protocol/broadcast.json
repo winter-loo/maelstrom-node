@@ -1,1 +1,1 @@
-{ "src": "n1", "dest": "n2", "body": { "type": "broadcast", "message": 1000 } }
+{ "src": "c0", "dest": "n1", "body": { "type": "broadcast", "message": 1000 } }
