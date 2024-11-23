@@ -1,6 +1,8 @@
+mod message_handlers;
 mod messages;
 mod node;
 
+use message_handlers::*;
 use messages::*;
 use node::*;
 
@@ -11,6 +13,15 @@ fn main() {
 
     let mut node = Node::new();
 
+    let router: Vec<Box<dyn MessageHandler>> = vec![
+        Box::new(InitHandler),
+        Box::new(EchoHandler),
+        Box::new(GenerateHandler),
+        Box::new(TopologyHandler),
+        Box::new(BroadcastHandler),
+        Box::new(ReadHandler),
+    ];
+
     for line in stdin.lines() {
         match line {
             Ok(content) => {
@@ -19,7 +30,7 @@ fn main() {
                 }
                 match serde_json::from_str::<Message>(&content) {
                     Ok(msg) => {
-                        let response = node.handle_message(msg);
+                        let response = node.handle_message(&msg, &router);
                         node.send(response);
                     }
                     Err(err) => eprintln!("invalid json data for message: {}", err),

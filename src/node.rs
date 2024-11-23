@@ -1,13 +1,13 @@
-use std::collections::HashMap;
+use crate::message_handlers::*;
 use crate::messages::*;
-use uuid::Uuid;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
-#[derive(Debug)]
 pub struct Node {
     pub id: String,
     pub node_ids: Vec<String>,
     pub topology: HashMap<String, Vec<String>>,
-    pub messages_seen: Vec<BroadcastValue>,
+    pub messages_seen: HashSet<BroadcastValue>,
 }
 
 impl Node {
@@ -16,18 +16,22 @@ impl Node {
             id: String::from(""),
             node_ids: Vec::new(),
             topology: HashMap::new(),
-            messages_seen: Vec::new(),
+            messages_seen: HashSet::new(),
         }
     }
 
-    pub fn handle_message(&mut self, req: Message) -> Message {
+    pub fn handle_message(
+        &mut self,
+        req: &Message,
+        msg_handlers: &[Box<dyn MessageHandler>],
+    ) -> Message {
         let mut res = Message {
-            src: req.dest,
-            dest: req.src,
+            src: req.dest.clone(),
+            dest: req.src.clone(),
             body: MessageBody {
                 msg_id: None,
                 in_reply_to: None,
-                payload: Payload::Empty,
+                extra: MessageExtra::Empty,
             },
         };
         res.body.in_reply_to = req.body.msg_id;
@@ -35,66 +39,22 @@ impl Node {
             res.body.msg_id = Some(msg_id + 1);
         }
 
-        match req.body.payload {
-            Payload::Empty => {}
+        let extra = &req.body.extra;
+        let handler = msg_handlers.iter().find(|h| h.can_handle(extra));
 
-            Payload::Init(init) => {
-                self.id = init.node_id;
-                self.node_ids = init.node_ids;
-
-                res.body.payload = Payload::InitOk;
+        match handler {
+            Some(handler) => {
+                res.body.extra = handler.handle(self, extra).unwrap();
             }
-            Payload::InitOk => {}
-
-            Payload::Echo(payload) => {
-                res.body.payload = Payload::EchoOk(EchoResponsePayload { echo: payload.echo });
+            None => {
+                eprintln!("unknow message: {:#?}", req);
             }
-            Payload::EchoOk(_) => {}
-
-            Payload::Generate => {
-                res.body.payload = Payload::GenerateOk(GenerateResponsePayload {
-                    id: Uuid::new_v4().to_string(),
-                });
-            }
-            Payload::GenerateOk(_) => {}
-
-            Payload::Topology(payload) => {
-                res.body.payload = Payload::TopologyOk;
-                self.topology = payload.topology;
-            }
-            Payload::TopologyOk => {},
-
-            Payload::Broadcast(payload) => {
-                res.body.payload = Payload::BroadcastOk;
-                self.messages_seen.push(payload.message);
-
-                for neibor in self.topology.get(&self.id).unwrap() {
-                    let my_req = Message {
-                        src: self.id.clone(),
-                        dest: neibor.clone(),
-                        body: MessageBody {
-                            msg_id: Some(1),
-                            in_reply_to: None,
-                            payload: Payload::Broadcast(payload.clone()),
-                        }
-                    };
-                    self.send(my_req);
-                }
-            }
-            Payload::BroadcastOk => {},
-
-            Payload::Read => {
-                res.body.payload = Payload::ReadOk(ReadResponsePayload{
-                    messages: self.messages_seen.clone(),
-                });
-            }
-            Payload::ReadOk(_) => {},
         }
 
         res
     }
 
-    pub fn send(&self, req: Message) {
-        println!("{}", serde_json::to_string(&req).unwrap());
+    pub fn send(&self, res: Message) {
+        println!("{}", serde_json::to_string(&res).unwrap());
     }
 }

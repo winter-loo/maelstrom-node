@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
@@ -20,63 +21,63 @@ pub struct MessageBody {
     // https://serde.rs/attr-flatten.html
     // The flatten attribute inlines keys from a field into the parent struct.
     #[serde(flatten)]
-    pub payload: Payload,
+    pub extra: MessageExtra,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 // https://serde.rs/container-attrs.html
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
-pub enum Payload {
+pub enum MessageExtra {
     Empty,
-    Init(InitRequestPayload),
+    Init(InitRequestExtra),
     InitOk,
-    Echo(EchoRequestPayload),
-    EchoOk(EchoResponsePayload),
+    Echo(EchoRequestExtra),
+    EchoOk(EchoResponseExtra),
     Generate,
-    GenerateOk(GenerateResponsePayload),
-    Topology(TopologyRequestPayload),
+    GenerateOk(GenerateResponseExtra),
+    Topology(TopologyRequestExtra),
     TopologyOk,
-    Broadcast(BroadcastRequestPayload),
+    Broadcast(BroadcastRequestExtra),
     BroadcastOk,
     Read,
-    ReadOk(ReadResponsePayload),
+    ReadOk(ReadResponseExtra),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct EchoRequestPayload {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct EchoRequestExtra {
     pub echo: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct EchoResponsePayload {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct EchoResponseExtra {
     pub echo: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct InitRequestPayload {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct InitRequestExtra {
     pub node_id: String,
     pub node_ids: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct GenerateResponsePayload {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GenerateResponseExtra {
     pub id: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct TopologyRequestPayload {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TopologyRequestExtra {
     pub topology: HashMap<String, Vec<String>>,
 }
 
 pub type BroadcastValue = u64;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct BroadcastRequestPayload {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct BroadcastRequestExtra {
     pub message: BroadcastValue,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct ReadResponsePayload {
-    pub messages: Vec<BroadcastValue>,
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ReadResponseExtra {
+    pub messages: HashSet<BroadcastValue>,
 }
