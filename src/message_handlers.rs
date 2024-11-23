@@ -90,19 +90,21 @@ impl MessageHandler for BroadcastHandler {
 
     fn handle(&self, node: &mut Node, req: &MessageExtra) -> Option<MessageExtra> {
         if let MessageExtra::Broadcast(payload) = req {
-            node.messages_seen.insert(payload.message);
+            if None == node.messages_seen.get(&payload.message) {
+                node.messages_seen.insert(payload.message);
 
-            for neibor in node.topology.get(&node.id).unwrap() {
-                let my_req = Message {
-                    src: node.id.clone(),
-                    dest: neibor.clone(),
-                    body: MessageBody {
-                        msg_id: Some(1),
-                        in_reply_to: None,
-                        extra: req.clone(),
-                    },
-                };
-                node.send(my_req);
+                for neibor in node.topology.get(&node.id).unwrap() {
+                    let my_req = Message {
+                        src: node.id.clone(),
+                        dest: neibor.clone(),
+                        body: MessageBody {
+                            msg_id: Some(1),
+                            in_reply_to: None,
+                            extra: req.clone(),
+                        },
+                    };
+                    node.send(my_req);
+                }
             }
 
             Some(MessageExtra::BroadcastOk)
