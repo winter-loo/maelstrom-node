@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// protocol specification from https://github.com/jepsen-io/maelstrom/blob/main/doc/protocol.md
 #[derive(Serialize, Deserialize, Debug, Clone)]

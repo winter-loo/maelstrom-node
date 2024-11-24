@@ -148,14 +148,20 @@ impl MessageHandler for BroadcastHandler {
                         src: node.id.clone(),
                         dest: neibor.clone(),
                         body: MessageBody {
-                            // Per the doc https://github.com/jepsen-io/maelstrom/blob/main/doc/03-broadcast/01-broadcast.md,
-                            // Inter-server messages don't have a msg_id, and don't need a response.
-                            msg_id: None,
+                            msg_id: Some(node.next_msg_id()),
                             in_reply_to: None,
                             // broadcast message
                             extra: req.body.extra.clone(),
                         },
                     };
+                    eprintln!("sent {}", serde_json::to_string(&my_req).unwrap());
+                    {
+                        let mut unpacked = node.unacked.lock().unwrap();
+                        unpacked.insert(
+                            my_req.body.msg_id.unwrap(),
+                            serde_json::to_string(&my_req).unwrap(),
+                        );
+                    }
                     node.send(my_req);
                 }
             }
@@ -174,7 +180,11 @@ impl MessageHandler for BroadcastOkHandler {
         matches!(req.body.extra, MessageExtra::BroadcastOk)
     }
 
-    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+        if let Some(in_reply_to) = &req.body.in_reply_to {
+            eprintln!("broadcast ok for message {}", in_reply_to);
+            node.unacked.lock().unwrap().remove(in_reply_to);
+        }
         None
     }
 }

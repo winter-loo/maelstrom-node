@@ -23,7 +23,7 @@ fn main() {
         Box::new(TopologyHandler),
         Box::new(TopologyOkHandler),
         Box::new(BroadcastHandler),
-        Box::new(BroadcastOkHandler),        
+        Box::new(BroadcastOkHandler),
         Box::new(ReadHandler),
         Box::new(ReadOkHandler),
     ];
@@ -34,7 +34,7 @@ fn main() {
                 if content.is_empty() {
                     continue;
                 }
-                match serde_json::from_str::<Message>(& content) {
+                match serde_json::from_str::<Message>(&content) {
                     Ok(msg) => {
                         if let Some(response) = node.handle_message(&msg, &router) {
                             node.send(response);
