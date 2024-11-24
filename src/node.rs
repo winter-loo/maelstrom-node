@@ -24,14 +24,14 @@ impl Node {
         &mut self,
         req: &Message,
         msg_handlers: &[Box<dyn MessageHandler>],
-    ) -> Message {
+    ) -> Option<Message> {
         let mut res = Message {
             src: req.dest.clone(),
             dest: req.src.clone(),
             body: MessageBody {
                 msg_id: None,
                 in_reply_to: None,
-                extra: MessageExtra::Empty,
+                extra: None,
             },
         };
         res.body.in_reply_to = req.body.msg_id;
@@ -40,18 +40,26 @@ impl Node {
         }
 
         let extra = &req.body.extra;
-        let handler = msg_handlers.iter().find(|h| h.can_handle(extra));
+        if let Some(extra) = extra {
+            let handler = msg_handlers.iter().find(|h| h.can_handle(extra));
 
-        match handler {
-            Some(handler) => {
-                res.body.extra = handler.handle(self, extra).unwrap();
+            match handler {
+                Some(handler) => {
+                    res.body.extra = handler.handle(self, extra);
+                    if res.body.extra.is_none() {
+                        None
+                    } else {
+                        Some(res)
+                    }
+                }
+                None => {
+                    eprintln!("unknow message: {:#?}", req);
+                    None
+                }
             }
-            None => {
-                eprintln!("unknow message: {:#?}", req);
-            }
+        } else {
+            None
         }
-
-        res
     }
 
     pub fn send(&self, res: Message) {

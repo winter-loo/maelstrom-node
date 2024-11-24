@@ -20,8 +20,8 @@ pub struct MessageBody {
 
     // https://serde.rs/attr-flatten.html
     // The flatten attribute inlines keys from a field into the parent struct.
-    #[serde(flatten)]
-    pub extra: MessageExtra,
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub extra: Option<MessageExtra>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -29,7 +29,6 @@ pub struct MessageBody {
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum MessageExtra {
-    Empty,
     Init(InitRequestExtra),
     InitOk,
     Echo(EchoRequestExtra),

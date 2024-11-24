@@ -15,11 +15,17 @@ fn main() {
 
     let router: Vec<Box<dyn MessageHandler>> = vec![
         Box::new(InitHandler),
+        Box::new(InitOkHandler),
         Box::new(EchoHandler),
+        Box::new(EchoOkHandler),
         Box::new(GenerateHandler),
+        Box::new(GenerateOkHandler),
         Box::new(TopologyHandler),
+        Box::new(TopologyOkHandler),
         Box::new(BroadcastHandler),
+        Box::new(BroadcastOkHandler),        
         Box::new(ReadHandler),
+        Box::new(ReadOkHandler),
     ];
 
     for line in stdin.lines() {
@@ -28,10 +34,11 @@ fn main() {
                 if content.is_empty() {
                     continue;
                 }
-                match serde_json::from_str::<Message>(&content) {
+                match serde_json::from_str::<Message>(& content) {
                     Ok(msg) => {
-                        let response = node.handle_message(&msg, &router);
-                        node.send(response);
+                        if let Some(response) = node.handle_message(&msg, &router) {
+                            node.send(response);
+                        }
                     }
                     Err(err) => eprintln!("invalid json data for message: {}", err),
                 }

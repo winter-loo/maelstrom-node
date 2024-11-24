@@ -5,7 +5,8 @@ use uuid::Uuid;
 pub trait MessageHandler {
     fn can_handle(&self, req: &MessageExtra) -> bool;
 
-    /// each Message may or may not mutate the state of a Node.
+    /// Each Message may or may not mutate the state of a Node.
+    /// When None is returned, the message is not responded to its peer.
     fn handle(&self, node: &mut Node, req: &MessageExtra) -> Option<MessageExtra>;
 }
 
@@ -28,6 +29,18 @@ impl MessageHandler for InitHandler {
     }
 }
 
+pub struct InitOkHandler;
+
+impl MessageHandler for InitOkHandler {
+    fn can_handle(&self, req: &MessageExtra) -> bool {
+        matches!(req, MessageExtra::InitOk)
+    }
+
+    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+        None
+    }
+}
+
 pub struct EchoHandler;
 
 impl MessageHandler for EchoHandler {
@@ -43,6 +56,18 @@ impl MessageHandler for EchoHandler {
         } else {
             None
         }
+    }
+}
+
+pub struct EchoOkHandler;
+
+impl MessageHandler for EchoOkHandler {
+    fn can_handle(&self, req: &MessageExtra) -> bool {
+        matches!(req, MessageExtra::EchoOk(_))
+    }
+
+    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+        None
     }
 }
 
@@ -64,6 +89,18 @@ impl MessageHandler for GenerateHandler {
     }
 }
 
+pub struct GenerateOkHandler;
+
+impl MessageHandler for GenerateOkHandler {
+    fn can_handle(&self, req: &MessageExtra) -> bool {
+        matches!(req, MessageExtra::GenerateOk(_))
+    }
+
+    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+        None
+    }
+}
+
 pub struct TopologyHandler;
 
 impl MessageHandler for TopologyHandler {
@@ -78,6 +115,18 @@ impl MessageHandler for TopologyHandler {
         } else {
             None
         }
+    }
+}
+
+pub struct TopologyOkHandler;
+
+impl MessageHandler for TopologyOkHandler {
+    fn can_handle(&self, req: &MessageExtra) -> bool {
+        matches!(req, MessageExtra::TopologyOk)
+    }
+
+    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+        None
     }
 }
 
@@ -98,7 +147,7 @@ impl MessageHandler for BroadcastHandler {
                         body: MessageBody {
                             msg_id: Some(1),
                             in_reply_to: None,
-                            extra: req.clone(),
+                            extra: Some(req.clone()),
                         },
                     };
                     node.send(my_req);
@@ -109,6 +158,18 @@ impl MessageHandler for BroadcastHandler {
         } else {
             None
         }
+    }
+}
+
+pub struct BroadcastOkHandler;
+
+impl MessageHandler for BroadcastOkHandler {
+    fn can_handle(&self, req: &MessageExtra) -> bool {
+        matches!(req, MessageExtra::BroadcastOk)
+    }
+
+    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+        None
     }
 }
 
@@ -127,5 +188,17 @@ impl MessageHandler for ReadHandler {
         } else {
             None
         }
+    }
+}
+
+pub struct ReadOkHandler;
+
+impl MessageHandler for ReadOkHandler {
+    fn can_handle(&self, req: &MessageExtra) -> bool {
+        matches!(req, MessageExtra::ReadOk(_))
+    }
+
+    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+        None
     }
 }
