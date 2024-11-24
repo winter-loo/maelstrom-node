@@ -145,8 +145,11 @@ impl MessageHandler for BroadcastHandler {
                         src: node.id.clone(),
                         dest: neibor.clone(),
                         body: MessageBody {
-                            msg_id: Some(1),
+                            // Per the doc https://github.com/jepsen-io/maelstrom/blob/main/doc/03-broadcast/01-broadcast.md,
+                            // Inter-server messages don't have a msg_id, and don't need a response.
+                            msg_id: None,
                             in_reply_to: None,
+                            // broadcast message
                             extra: Some(req.clone()),
                         },
                     };
