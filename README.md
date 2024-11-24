@@ -25,3 +25,9 @@ reference:
 
 In this challenge, we need to handle message loss.
 
+reference: https://github.com/jepsen-io/maelstrom/blob/main/doc/03-broadcast/02-performance.md
+
+### optimization
+
+First goal: reduce the number of messages sent between nodes(internal servers).
+Solution: don't broadcast a message back to the server which sent it to us.

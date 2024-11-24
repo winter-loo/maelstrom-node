@@ -3,22 +3,22 @@ use crate::node::*;
 use uuid::Uuid;
 
 pub trait MessageHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool;
+    fn can_handle(&self, req: &Message) -> bool;
 
     /// Each Message may or may not mutate the state of a Node.
     /// When None is returned, the message is not responded to its peer.
-    fn handle(&self, node: &mut Node, req: &MessageExtra) -> Option<MessageExtra>;
+    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra>;
 }
 
 pub struct InitHandler;
 
 impl MessageHandler for InitHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::Init(_))
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::Init(_))
     }
 
-    fn handle(&self, node: &mut Node, req: &MessageExtra) -> Option<MessageExtra> {
-        if let MessageExtra::Init(init) = req {
+    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+        if let MessageExtra::Init(init) = &req.body.extra {
             node.id = init.node_id.clone();
             node.node_ids = init.node_ids.clone();
 
@@ -32,11 +32,11 @@ impl MessageHandler for InitHandler {
 pub struct InitOkHandler;
 
 impl MessageHandler for InitOkHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::InitOk)
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::InitOk)
     }
 
-    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -44,12 +44,12 @@ impl MessageHandler for InitOkHandler {
 pub struct EchoHandler;
 
 impl MessageHandler for EchoHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::Echo(_))
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::Echo(_))
     }
 
-    fn handle(&self, _node: &mut Node, req: &MessageExtra) -> Option<MessageExtra> {
-        if let MessageExtra::Echo(echo) = req {
+    fn handle(&self, _node: &mut Node, req: &Message) -> Option<MessageExtra> {
+        if let MessageExtra::Echo(echo) = &req.body.extra {
             Some(MessageExtra::EchoOk(EchoResponseExtra {
                 echo: echo.echo.clone(),
             }))
@@ -62,11 +62,11 @@ impl MessageHandler for EchoHandler {
 pub struct EchoOkHandler;
 
 impl MessageHandler for EchoOkHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::EchoOk(_))
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::EchoOk(_))
     }
 
-    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -74,12 +74,12 @@ impl MessageHandler for EchoOkHandler {
 pub struct GenerateHandler;
 
 impl MessageHandler for GenerateHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::Generate)
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::Generate)
     }
 
-    fn handle(&self, _node: &mut Node, req: &MessageExtra) -> Option<MessageExtra> {
-        if let MessageExtra::Generate = req {
+    fn handle(&self, _node: &mut Node, req: &Message) -> Option<MessageExtra> {
+        if let MessageExtra::Generate = &req.body.extra {
             Some(MessageExtra::GenerateOk(GenerateResponseExtra {
                 id: Uuid::new_v4().to_string(),
             }))
@@ -92,11 +92,11 @@ impl MessageHandler for GenerateHandler {
 pub struct GenerateOkHandler;
 
 impl MessageHandler for GenerateOkHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::GenerateOk(_))
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::GenerateOk(_))
     }
 
-    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -104,12 +104,12 @@ impl MessageHandler for GenerateOkHandler {
 pub struct TopologyHandler;
 
 impl MessageHandler for TopologyHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::Topology(_))
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::Topology(_))
     }
 
-    fn handle(&self, node: &mut Node, req: &MessageExtra) -> Option<MessageExtra> {
-        if let MessageExtra::Topology(payload) = req {
+    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+        if let MessageExtra::Topology(payload) = &req.body.extra {
             node.topology = payload.topology.clone();
             Some(MessageExtra::TopologyOk)
         } else {
@@ -121,11 +121,11 @@ impl MessageHandler for TopologyHandler {
 pub struct TopologyOkHandler;
 
 impl MessageHandler for TopologyOkHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::TopologyOk)
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::TopologyOk)
     }
 
-    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -133,14 +133,17 @@ impl MessageHandler for TopologyOkHandler {
 pub struct BroadcastHandler;
 
 impl MessageHandler for BroadcastHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::Broadcast(_))
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::Broadcast(_))
     }
 
-    fn handle(&self, node: &mut Node, req: &MessageExtra) -> Option<MessageExtra> {
-        if let MessageExtra::Broadcast(payload) = req {
+    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+        if let MessageExtra::Broadcast(payload) = &req.body.extra {
             if node.messages_seen.insert(payload.message) {
                 for neibor in node.topology.get(&node.id).unwrap() {
+                    if neibor == &req.src {
+                        continue;
+                    }
                     let my_req = Message {
                         src: node.id.clone(),
                         dest: neibor.clone(),
@@ -150,7 +153,7 @@ impl MessageHandler for BroadcastHandler {
                             msg_id: None,
                             in_reply_to: None,
                             // broadcast message
-                            extra: Some(req.clone()),
+                            extra: req.body.extra.clone(),
                         },
                     };
                     node.send(my_req);
@@ -167,11 +170,11 @@ impl MessageHandler for BroadcastHandler {
 pub struct BroadcastOkHandler;
 
 impl MessageHandler for BroadcastOkHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::BroadcastOk)
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::BroadcastOk)
     }
 
-    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -179,12 +182,12 @@ impl MessageHandler for BroadcastOkHandler {
 pub struct ReadHandler;
 
 impl MessageHandler for ReadHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::Read)
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::Read)
     }
 
-    fn handle(&self, node: &mut Node, req: &MessageExtra) -> Option<MessageExtra> {
-        if let MessageExtra::Read = req {
+    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+        if let MessageExtra::Read = &req.body.extra {
             Some(MessageExtra::ReadOk(ReadResponseExtra {
                 messages: node.messages_seen.clone(),
             }))
@@ -197,11 +200,11 @@ impl MessageHandler for ReadHandler {
 pub struct ReadOkHandler;
 
 impl MessageHandler for ReadOkHandler {
-    fn can_handle(&self, req: &MessageExtra) -> bool {
-        matches!(req, MessageExtra::ReadOk(_))
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::ReadOk(_))
     }
 
-    fn handle(&self, _node: &mut Node, _req: &MessageExtra) -> Option<MessageExtra> {
+    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
