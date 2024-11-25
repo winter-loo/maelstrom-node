@@ -41,6 +41,6 @@ reference:
 First goal: reduce the number of messages sent between nodes(internal servers).
 Solution: don't broadcast a message back to the server which sent it to us.
 
-## dealing with failure
+### dealing with failure
 
 when messages are lost, we need to retry sending the message and we need a way to know when to stop retrying.

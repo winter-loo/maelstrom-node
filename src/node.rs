@@ -24,7 +24,7 @@ impl Node {
         std::thread::spawn(move || {
             loop {
                 // TODO: how long should we wait then retry?
-                std::thread::sleep(std::time::Duration::from_millis(5000));
+                std::thread::sleep(std::time::Duration::from_millis(200));
                 let unacked = unacked_clone.lock().unwrap();
                 for (msg_id, msg) in unacked.iter() {
                     eprintln!("retry message {}, {}", msg_id, msg);
