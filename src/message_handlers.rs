@@ -218,3 +218,57 @@ impl MessageHandler for ReadOkHandler {
         None
     }
 }
+
+pub struct TxnHandler;
+
+impl MessageHandler for TxnHandler {
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::Txn(_))
+    }
+
+    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+        if let MessageExtra::Txn(payload) = &req.body.extra {
+            let mut results = Vec::new();
+
+            for op in &payload.txn {
+                if op.0 == "r" {
+                    let value = node.kv_store.get(&op.1);
+                    results.push(Query(
+                        "r".to_string(),
+                        op.1.clone(),
+                        QueryValue::Read(value.cloned()),
+                    ));
+                }
+
+                if op.0 == "append" {
+                    node.kv_store
+                        .entry(op.1.clone())
+                        .or_insert_with(|| vec![])
+                        .push(match op.2 {
+                            QueryValue::Append(v) => v,
+                            QueryValue::Read(_) => panic!("wrong value for 'append' operation"),
+                        });
+                    results.push(Query("append".to_string(), op.1.clone(), op.2.clone()));
+                }
+            }
+
+            let mytxn = TxnResponseExtra { txn: results };
+            Some(MessageExtra::TxnOk(mytxn))
+        } else {
+            None
+        }
+    }
+}
+
+pub struct TxnOkHandler;
+
+impl MessageHandler for TxnOkHandler {
+    fn can_handle(&self, req: &Message) -> bool {
+        matches!(req.body.extra, MessageExtra::TxnOk(_))
+    }
+
+    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
+        None
+    }
+}
+

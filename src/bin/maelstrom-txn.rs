@@ -1,10 +1,6 @@
-mod message_handlers;
-mod messages;
-mod node;
-
-use message_handlers::*;
-use messages::*;
-use node::*;
+use maelstrom_node::messages::*;
+use maelstrom_node::message_handlers::*;
+use maelstrom_node::node::*;
 
 use std::io::{self, BufRead};
 
@@ -12,21 +8,12 @@ fn main() {
     let stdin = io::stdin().lock();
 
     let mut node = Node::new();
-    node.start_broadcast_loop();
 
     let router: Vec<Box<dyn MessageHandler>> = vec![
         Box::new(InitHandler),
         Box::new(InitOkHandler),
-        Box::new(EchoHandler),
-        Box::new(EchoOkHandler),
-        Box::new(GenerateHandler),
-        Box::new(GenerateOkHandler),
-        Box::new(TopologyHandler),
-        Box::new(TopologyOkHandler),
-        Box::new(BroadcastHandler),
-        Box::new(BroadcastOkHandler),
-        Box::new(ReadHandler),
-        Box::new(ReadOkHandler),
+        Box::new(TxnHandler),
+        Box::new(TxnOkHandler),
     ];
 
     for line in stdin.lines() {

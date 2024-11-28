@@ -41,6 +41,8 @@ pub enum MessageExtra {
     BroadcastOk,
     Read,
     ReadOk(ReadResponseExtra),
+    Txn(TxnRequestExtra),
+    TxnOk(TxnResponseExtra),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -79,4 +81,25 @@ pub struct BroadcastRequestExtra {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ReadResponseExtra {
     pub messages: HashSet<BroadcastValue>,
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TxnRequestExtra {
+    pub txn: Vec<Query>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TxnResponseExtra {
+    pub txn: Vec<Query>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Query(pub String, pub usize, pub QueryValue);
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum QueryValue {
+    Read(Option<Vec<usize>>),
+    Append(usize),
 }

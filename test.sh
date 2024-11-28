@@ -26,6 +26,9 @@ c6a_command="$command_prefix -w txn-rw-register --node-count 1 --time-limit 20 -
 c6b_command="$command_prefix -w txn-rw-register --node-count 2 --concurrency 2n --time-limit 20 --rate 1000 --consistency-models read-uncommitted --availability total --nemesis partition"
 c6c_command="$command_prefix -w txn-rw-register --node-count 2 --concurrency 2n --time-limit 20 --rate 1000 --consistency-models read-committed --availability total –-nemesis partition"
 
+command_prefix="maelstrom/maelstrom test --bin target/debug/maelstrom-txn"
+c7a_command="$command_prefix -w txn-list-append --node-count 1 --time-limit 10"
+
 if [ "$(uname)" == "Darwin" ]; then
     # use arrays for macos because bash doesn't support associative arrays
     tests=(
@@ -43,6 +46,7 @@ if [ "$(uname)" == "Darwin" ]; then
         "c6a:$c6a_command"
         "c6b:$c6b_command"
         "c6c:$c6c_command"
+        "c7a:$c7a_command"
     )
 else
     declare -A tests
@@ -60,6 +64,7 @@ else
     tests["c6a"]="$c6a_command"
     tests["c6b"]="$c6b_command"
     tests["c6c"]="$c6c_command"
+    tests["c7a"]="$c7a_command"
 fi
 
 if [ "$#" -eq 0 ]; then

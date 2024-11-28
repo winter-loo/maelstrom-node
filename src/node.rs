@@ -14,14 +14,27 @@ pub struct Node {
     msg_id: AtomicU64,
     // msg_id -> Message serialized string
     pub unacked: Arc<Mutex<HashMap<u64, String>>>,
+    // for txn-list-append challenge
+    pub kv_store: HashMap<usize, Vec<usize>>,
 }
 
 impl Node {
     pub fn new() -> Self {
-        let unacked = Arc::new(Mutex::new(HashMap::new()));
-        let unacked_clone = unacked.clone();
+        Node {
+            id: String::from(""),
+            node_ids: Vec::new(),
+            topology: HashMap::new(),
+            messages_seen: HashSet::new(),
+            msg_id: AtomicU64::new(0),
+            unacked: Arc::new(Mutex::new(HashMap::new())),
+            kv_store: HashMap::new(),
+        }
+    }
+
+    pub fn start_broadcast_loop(&self) {
+        let unacked_clone = self.unacked.clone();
         // create a thread to retry unacked messages
-        std::thread::spawn(move || {
+        let jh = std::thread::spawn(move || {
             loop {
                 // TODO: how long should we wait then retry?
                 std::thread::sleep(std::time::Duration::from_millis(200));
@@ -32,15 +45,8 @@ impl Node {
                 }
             }
         });
-
-        Node {
-            id: String::from(""),
-            node_ids: Vec::new(),
-            topology: HashMap::new(),
-            messages_seen: HashSet::new(),
-            msg_id: AtomicU64::new(0),
-            unacked,
-        }
+        // detach the thread
+        drop(jh);
     }
 
     pub fn next_msg_id(&self) -> u64 {

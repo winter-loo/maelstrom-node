@@ -44,3 +44,8 @@ Solution: don't broadcast a message back to the server which sent it to us.
 ### dealing with failure
 
 when messages are lost, we need to retry sending the message and we need a way to know when to stop retrying.
+
+## Challenge #7a: Datomic Transactor Model
+
+reference:
+  * https://github.com/jepsen-io/maelstrom/blob/main/doc/05-datomic/01-single-node.md

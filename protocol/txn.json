@@ -1,0 +1,1 @@
+{ "src": "c0", "dest": "n1", "body": { "type": "txn", "msg_id": 3, "txn": [ ["r", 1, null], ["append", 1, 6], ["append", 2, 9] ] } }
