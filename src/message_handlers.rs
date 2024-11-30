@@ -238,8 +238,15 @@ impl MessageHandler for TxnHandler {
             let mut transactor = Transactor::new(node);
             let results = transactor.transact(&payload.txn);
 
-            let mytxn = TxnResponseExtra { txn: results };
-            Some(MessageExtra::TxnOk(mytxn))
+            match results {
+                Ok(txn) => {
+                    let mytxn = TxnResponseExtra { txn };
+                    Some(MessageExtra::TxnOk(mytxn))
+                }
+                Err(e) => {
+                    Some(MessageExtra::Error(e))
+                }
+            }
         } else {
             None
         }

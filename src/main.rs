@@ -25,7 +25,9 @@ fn main() {
         Box::new(TopologyOkHandler),
         Box::new(BroadcastHandler),
         Box::new(BroadcastOkHandler),
+        #[cfg(not(feature = "lin_kv"))]
         Box::new(ReadHandler),
+        #[cfg(not(feature = "lin_kv"))]
         Box::new(ReadOkHandler),
     ];
 

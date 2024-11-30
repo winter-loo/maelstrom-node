@@ -71,12 +71,12 @@ pub struct ErrorExtra {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KvReadExtra {
-    pub key: usize,
+    pub key: serde_json::Value,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KvReadOkExtra {
-    pub value: Vec<usize>,
+    pub value: serde_json::Value,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -91,9 +91,9 @@ pub struct KvWriteExtra {
 /// from value doesn't match.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KvCasData {
-    pub key: usize,
-    pub from: Vec<usize>,
-    pub to: Vec<usize>,
+    pub key: serde_json::Value,
+    pub from: serde_json::Value,
+    pub to: serde_json::Value,
     pub create_if_not_exists: bool,
 }
 
