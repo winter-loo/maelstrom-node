@@ -24,11 +24,13 @@ pub struct MessageBody {
     pub extra: MessageExtra,
 }
 
+/// protocol: https://github.com/jepsen-io/maelstrom/blob/main/doc/protocol.md
 #[derive(Serialize, Deserialize, Debug, Clone)]
 // https://serde.rs/container-attrs.html
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum MessageExtra {
+    Error(ErrorExtra),
     Init(InitRequestExtra),
     InitOk,
     Echo(EchoRequestExtra),
@@ -39,10 +41,60 @@ pub enum MessageExtra {
     TopologyOk,
     Broadcast(BroadcastRequestExtra),
     BroadcastOk,
+    #[cfg(not(feature = "lin_kv"))]
     Read,
+    #[cfg(not(feature = "lin_kv"))]
     ReadOk(ReadResponseExtra),
     Txn(TxnRequestExtra),
     TxnOk(TxnResponseExtra),
+    #[cfg(feature = "lin_kv")]
+    #[serde(rename = "read")]
+    KvRead(KvReadExtra),
+    #[cfg(feature = "lin_kv")]
+    #[serde(rename = "read_ok")]
+    KvReadOk(KvReadOkExtra),
+    #[serde(rename = "write")]
+    KvWrite(KvWriteExtra),
+    #[serde(rename = "write_ok")]
+    KvWriteOk,
+    #[serde(rename = "cas")]
+    KvCas(KvCasData),
+    #[serde(rename = "cas_ok")]
+    KvCasOk,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ErrorExtra {
+    pub code: u64,
+    pub text: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KvReadExtra {
+    pub key: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KvReadOkExtra {
+    pub value: Vec<usize>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KvWriteExtra {
+    pub key: usize,
+    pub value: usize,
+}
+
+/// Atomically compare-and-sets a single key:
+/// if the value of key is currently `from`, sets it to `to`.
+/// Returns error 20 if the key doesn't exist, and 22 if the
+/// from value doesn't match.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KvCasData {
+    pub key: usize,
+    pub from: Vec<usize>,
+    pub to: Vec<usize>,
+    pub create_if_not_exists: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -82,7 +134,6 @@ pub struct BroadcastRequestExtra {
 pub struct ReadResponseExtra {
     pub messages: HashSet<BroadcastValue>,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TxnRequestExtra {

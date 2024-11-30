@@ -49,3 +49,4 @@ when messages are lost, we need to retry sending the message and we need a way t
 
 reference:
   * https://github.com/jepsen-io/maelstrom/blob/main/doc/05-datomic/01-single-node.md
+  * https://github.com/jepsen-io/maelstrom/blob/main/doc/05-datomic/02-shared-state.md

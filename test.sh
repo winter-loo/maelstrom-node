@@ -28,6 +28,7 @@ c6c_command="$command_prefix -w txn-rw-register --node-count 2 --concurrency 2n 
 
 command_prefix="maelstrom/maelstrom test --bin target/debug/maelstrom-txn"
 c7a_command="$command_prefix -w txn-list-append --node-count 1 --time-limit 10"
+c7b_command="$command_prefix -w txn-list-append --node-count 2 --time-limit 10"
 
 if [ "$(uname)" == "Darwin" ]; then
     # use arrays for macos because bash doesn't support associative arrays
@@ -47,6 +48,7 @@ if [ "$(uname)" == "Darwin" ]; then
         "c6b:$c6b_command"
         "c6c:$c6c_command"
         "c7a:$c7a_command"
+        "c7b:$c7b_command"
     )
 else
     declare -A tests
@@ -65,6 +67,7 @@ else
     tests["c6b"]="$c6b_command"
     tests["c6c"]="$c6c_command"
     tests["c7a"]="$c7a_command"
+    tests["c7b"]="$c7b_command"
 fi
 
 if [ "$#" -eq 0 ]; then
@@ -98,7 +101,12 @@ if [ ! -d maelstrom ]; then
     rm maelstrom.tar.bz2
 fi
 
-cargo build
+# if [ "$1" = "c7b" ]
+# then
+#   cargo build --bin maelstrom-txn --features lin_kv
+# else
+#   cargo build
+# fi
 
 if [ "$1" == "serve" ]; then
     maelstrom/maelstrom serve

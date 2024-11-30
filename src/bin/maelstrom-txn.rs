@@ -5,8 +5,6 @@ use maelstrom_node::node::*;
 use std::io::{self, BufRead};
 
 fn main() {
-    let stdin = io::stdin().lock();
-
     let mut node = Node::new();
 
     let router: Vec<Box<dyn MessageHandler>> = vec![
@@ -16,22 +14,25 @@ fn main() {
         Box::new(TxnOkHandler),
     ];
 
-    for line in stdin.lines() {
-        match line {
-            Ok(content) => {
-                if content.is_empty() {
-                    continue;
-                }
-                match serde_json::from_str::<Message>(&content) {
-                    Ok(msg) => {
-                        if let Some(response) = node.handle_message(&msg, &router) {
-                            node.send(response);
-                        }
-                    }
-                    Err(err) => eprintln!("invalid json data for message: {}", err),
+    loop {
+        let line = {
+            // unlock as soon as possible
+            let mut stdin = io::stdin().lock();
+            let mut buffer = String::new();
+            match stdin.read_line(&mut buffer) {
+                Ok(0) => break, // EOF reached, exit the loop
+                Ok(_) => buffer,
+                Err(e) => panic!("Error reading second line: {e}"),
+            }
+        };
+
+        match serde_json::from_str::<Message>(&line) {
+            Ok(msg) => {
+                if let Some(response) = node.handle_message(&msg, &router) {
+                    node.send(response);
                 }
             }
-            Err(err) => eprintln!("Error reading line: {}", err),
+            Err(err) => eprintln!("invalid json data for message: {}", err),
         }
     }
 }

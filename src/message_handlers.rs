@@ -1,5 +1,7 @@
 use crate::messages::*;
 use crate::node::*;
+#[cfg(feature = "lin_kv")]
+use crate::transactor::Transactor;
 use uuid::Uuid;
 
 pub trait MessageHandler {
@@ -189,8 +191,10 @@ impl MessageHandler for BroadcastOkHandler {
     }
 }
 
+#[cfg(not(feature = "lin_kv"))]
 pub struct ReadHandler;
 
+#[cfg(not(feature = "lin_kv"))]
 impl MessageHandler for ReadHandler {
     fn can_handle(&self, req: &Message) -> bool {
         matches!(req.body.extra, MessageExtra::Read)
@@ -207,8 +211,10 @@ impl MessageHandler for ReadHandler {
     }
 }
 
+#[cfg(not(feature = "lin_kv"))]
 pub struct ReadOkHandler;
 
+#[cfg(not(feature = "lin_kv"))]
 impl MessageHandler for ReadOkHandler {
     fn can_handle(&self, req: &Message) -> bool {
         matches!(req.body.extra, MessageExtra::ReadOk(_))
@@ -226,10 +232,23 @@ impl MessageHandler for TxnHandler {
         matches!(req.body.extra, MessageExtra::Txn(_))
     }
 
+    #[cfg(feature = "lin_kv")]
+    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+        if let MessageExtra::Txn(payload) = &req.body.extra {
+            let mut transactor = Transactor::new(node);
+            let results = transactor.transact(&payload.txn);
+
+            let mytxn = TxnResponseExtra { txn: results };
+            Some(MessageExtra::TxnOk(mytxn))
+        } else {
+            None
+        }
+    }
+
+    #[cfg(not(feature = "lin_kv"))]
     fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
         if let MessageExtra::Txn(payload) = &req.body.extra {
             let mut results = Vec::new();
-
             for op in &payload.txn {
                 if op.0 == "r" {
                     let value = node.kv_store.get(&op.1);
@@ -271,4 +290,3 @@ impl MessageHandler for TxnOkHandler {
         None
     }
 }
-

@@ -9,3 +9,15 @@ edition = "2021"
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"
 uuid = { version = "1.11.0", features = ["v4"] }
+
+[features]
+lin_kv = []
+
+[[bin]]
+name = "maelstrom-node"
+path = "src/main.rs"
+
+[[bin]]
+name = "maelstrom-txn"
+path = "src/bin/maelstrom-txn.rs"
+required-features = ["lin_kv"]

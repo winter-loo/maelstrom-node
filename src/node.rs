@@ -91,4 +91,14 @@ impl Node {
     pub fn send(&self, res: Message) {
         println!("{}", serde_json::to_string(&res).unwrap());
     }
+
+    #[cfg(feature = "lin_kv")]
+    pub fn sync_rpc(&self, req: Message) -> Message {
+        use std::io::BufRead;
+        println!("{}", serde_json::to_string(&req).unwrap());
+        let mut line = String::new();
+        std::io::stdin().lock().read_line(&mut line).unwrap();
+        eprintln!("received from lin-kv: {}", line);
+        serde_json::from_str(&line).unwrap()
+    }
 }
