@@ -29,6 +29,7 @@ c6c_command="$command_prefix -w txn-rw-register --node-count 2 --concurrency 2n 
 command_prefix="maelstrom/maelstrom test --bin target/debug/maelstrom-txn"
 c7a_command="$command_prefix -w txn-list-append --node-count 1 --time-limit 10"
 c7b_command="$command_prefix -w txn-list-append --node-count 2 --time-limit 10 --rate 100"
+c7c_command="$command_prefix -w txn-list-append --node-count 2 --time-limit 10 --rate 100"
 
 if [ "$(uname)" == "Darwin" ]; then
     # use arrays for macos because bash doesn't support associative arrays
@@ -49,6 +50,7 @@ if [ "$(uname)" == "Darwin" ]; then
         "c6c:$c6c_command"
         "c7a:$c7a_command"
         "c7b:$c7b_command"
+        "c7c:$c7c_command"
     )
 else
     declare -A tests
@@ -68,6 +70,7 @@ else
     tests["c6c"]="$c6c_command"
     tests["c7a"]="$c7a_command"
     tests["c7b"]="$c7b_command"
+    tests["c7c"]="$c7c_command"
 fi
 
 if [ "$#" -eq 0 ]; then
@@ -101,12 +104,22 @@ if [ ! -d maelstrom ]; then
     rm maelstrom.tar.bz2
 fi
 
-# if [ "$1" = "c7b" ]
-# then
-#   cargo build --bin maelstrom-txn --features lin_kv
-# else
-#   cargo build
-# fi
+if [ "$1" = "c7b" ]
+then
+  git checkout -b c7b 8b66865
+else
+  current_branch=$(git branch --show-current)
+  if [ "$current_branch" != "main" ]; then
+    git checkout main
+  fi
+fi
+
+if [ "$1" = "c7b" ] || [ "$1" = "c7c" ]
+then
+  cargo build --bin maelstrom-txn --features lin_kv
+else
+  cargo build
+fi
 
 if [ "$1" == "serve" ]; then
     maelstrom/maelstrom serve

@@ -49,4 +49,19 @@ when messages are lost, we need to retry sending the message and we need a way t
 
 reference:
   * https://github.com/jepsen-io/maelstrom/blob/main/doc/05-datomic/01-single-node.md
+
+## Challenge #7b: Shared State
+
+In this challenge, we store entire database in memory.
+
+reference:
   * https://github.com/jepsen-io/maelstrom/blob/main/doc/05-datomic/02-shared-state.md
+
+
+## Challenge #7c: persistent trees
+
+In this challenge, we store the pair (k, id) instead of (k, values) and the id
+points to the values.
+
+reference:
+  * https://github.com/jepsen-io/maelstrom/blob/main/doc/05-datomic/03-persistent-trees.md

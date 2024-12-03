@@ -2,6 +2,8 @@ use crate::messages::*;
 use crate::node::*;
 #[cfg(feature = "lin_kv")]
 use crate::transactor::Transactor;
+use std::cell::RefCell;
+use std::rc::Rc;
 use uuid::Uuid;
 
 pub trait MessageHandler {
@@ -9,7 +11,7 @@ pub trait MessageHandler {
 
     /// Each Message may or may not mutate the state of a Node.
     /// When None is returned, the message is not responded to its peer.
-    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra>;
+    fn handle(&self, node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra>;
 }
 
 pub struct InitHandler;
@@ -19,10 +21,10 @@ impl MessageHandler for InitHandler {
         matches!(req.body.extra, MessageExtra::Init(_))
     }
 
-    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra> {
         if let MessageExtra::Init(init) = &req.body.extra {
-            node.id = init.node_id.clone();
-            node.node_ids = init.node_ids.clone();
+            node.borrow_mut().id = init.node_id.clone();
+            node.borrow_mut().node_ids = init.node_ids.clone();
 
             Some(MessageExtra::InitOk)
         } else {
@@ -38,7 +40,7 @@ impl MessageHandler for InitOkHandler {
         matches!(req.body.extra, MessageExtra::InitOk)
     }
 
-    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, _node: &Rc<RefCell<Node>>, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -50,7 +52,7 @@ impl MessageHandler for EchoHandler {
         matches!(req.body.extra, MessageExtra::Echo(_))
     }
 
-    fn handle(&self, _node: &mut Node, req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, _node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra> {
         if let MessageExtra::Echo(echo) = &req.body.extra {
             Some(MessageExtra::EchoOk(EchoResponseExtra {
                 echo: echo.echo.clone(),
@@ -68,7 +70,7 @@ impl MessageHandler for EchoOkHandler {
         matches!(req.body.extra, MessageExtra::EchoOk(_))
     }
 
-    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, _node: &Rc<RefCell<Node>>, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -80,7 +82,7 @@ impl MessageHandler for GenerateHandler {
         matches!(req.body.extra, MessageExtra::Generate)
     }
 
-    fn handle(&self, _node: &mut Node, req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, _node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra> {
         if let MessageExtra::Generate = &req.body.extra {
             Some(MessageExtra::GenerateOk(GenerateResponseExtra {
                 id: Uuid::new_v4().to_string(),
@@ -98,7 +100,7 @@ impl MessageHandler for GenerateOkHandler {
         matches!(req.body.extra, MessageExtra::GenerateOk(_))
     }
 
-    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, _node: &Rc<RefCell<Node>>, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -110,9 +112,9 @@ impl MessageHandler for TopologyHandler {
         matches!(req.body.extra, MessageExtra::Topology(_))
     }
 
-    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra> {
         if let MessageExtra::Topology(payload) = &req.body.extra {
-            node.topology = payload.topology.clone();
+            node.borrow_mut().topology = payload.topology.clone();
             Some(MessageExtra::TopologyOk)
         } else {
             None
@@ -127,7 +129,7 @@ impl MessageHandler for TopologyOkHandler {
         matches!(req.body.extra, MessageExtra::TopologyOk)
     }
 
-    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, _node: &Rc<RefCell<Node>>, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -139,18 +141,18 @@ impl MessageHandler for BroadcastHandler {
         matches!(req.body.extra, MessageExtra::Broadcast(_))
     }
 
-    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra> {
         if let MessageExtra::Broadcast(payload) = &req.body.extra {
-            if node.messages_seen.insert(payload.message) {
-                for neibor in node.topology.get(&node.id).unwrap() {
+            if node.borrow_mut().messages_seen.insert(payload.message) {
+                for neibor in node.borrow().topology.get(&node.borrow().id).unwrap() {
                     if neibor == &req.src {
                         continue;
                     }
                     let my_req = Message {
-                        src: node.id.clone(),
+                        src: node.borrow().id.clone(),
                         dest: neibor.clone(),
                         body: MessageBody {
-                            msg_id: Some(node.next_msg_id()),
+                            msg_id: Some(node.borrow().next_msg_id()),
                             in_reply_to: None,
                             // broadcast message
                             extra: req.body.extra.clone(),
@@ -158,13 +160,14 @@ impl MessageHandler for BroadcastHandler {
                     };
                     eprintln!("sent {}", serde_json::to_string(&my_req).unwrap());
                     {
+                        let node = node.borrow();
                         let mut unpacked = node.unacked.lock().unwrap();
                         unpacked.insert(
                             my_req.body.msg_id.unwrap(),
                             serde_json::to_string(&my_req).unwrap(),
                         );
                     }
-                    node.send(my_req);
+                    node.borrow().send(my_req);
                 }
             }
 
@@ -182,9 +185,10 @@ impl MessageHandler for BroadcastOkHandler {
         matches!(req.body.extra, MessageExtra::BroadcastOk)
     }
 
-    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra> {
         if let Some(in_reply_to) = &req.body.in_reply_to {
             eprintln!("broadcast ok for message {}", in_reply_to);
+            let node = node.borrow();
             node.unacked.lock().unwrap().remove(in_reply_to);
         }
         None
@@ -200,10 +204,10 @@ impl MessageHandler for ReadHandler {
         matches!(req.body.extra, MessageExtra::Read)
     }
 
-    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra> {
         if let MessageExtra::Read = &req.body.extra {
             Some(MessageExtra::ReadOk(ReadResponseExtra {
-                messages: node.messages_seen.clone(),
+                messages: node.borrow().messages_seen.clone(),
             }))
         } else {
             None
@@ -220,7 +224,7 @@ impl MessageHandler for ReadOkHandler {
         matches!(req.body.extra, MessageExtra::ReadOk(_))
     }
 
-    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, _node: &Rc<RefCell<Node>>, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }
@@ -233,7 +237,7 @@ impl MessageHandler for TxnHandler {
     }
 
     #[cfg(feature = "lin_kv")]
-    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra> {
         if let MessageExtra::Txn(payload) = &req.body.extra {
             let mut transactor = Transactor::new(node);
             let results = transactor.transact(&payload.txn);
@@ -243,9 +247,7 @@ impl MessageHandler for TxnHandler {
                     let mytxn = TxnResponseExtra { txn };
                     Some(MessageExtra::TxnOk(mytxn))
                 }
-                Err(e) => {
-                    Some(MessageExtra::Error(e))
-                }
+                Err(e) => Some(MessageExtra::Error(e)),
             }
         } else {
             None
@@ -253,28 +255,30 @@ impl MessageHandler for TxnHandler {
     }
 
     #[cfg(not(feature = "lin_kv"))]
-    fn handle(&self, node: &mut Node, req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, node: &Rc<RefCell<Node>>, req: &Message) -> Option<MessageExtra> {
         if let MessageExtra::Txn(payload) = &req.body.extra {
             let mut results = Vec::new();
             for op in &payload.txn {
                 if op.0 == "r" {
+                    let node = node.borrow();
                     let value = node.kv_store.get(&op.1);
                     results.push(Query(
                         "r".to_string(),
-                        op.1.clone(),
+                        op.1,
                         QueryValue::Read(value.cloned()),
                     ));
                 }
 
                 if op.0 == "append" {
-                    node.kv_store
-                        .entry(op.1.clone())
-                        .or_insert_with(|| vec![])
+                    node.borrow_mut()
+                        .kv_store
+                        .entry(op.1)
+                        .or_default()
                         .push(match op.2 {
                             QueryValue::Append(v) => v,
                             QueryValue::Read(_) => panic!("wrong value for 'append' operation"),
                         });
-                    results.push(Query("append".to_string(), op.1.clone(), op.2.clone()));
+                    results.push(Query("append".to_string(), op.1, op.2.clone()));
                 }
             }
 
@@ -293,7 +297,7 @@ impl MessageHandler for TxnOkHandler {
         matches!(req.body.extra, MessageExtra::TxnOk(_))
     }
 
-    fn handle(&self, _node: &mut Node, _req: &Message) -> Option<MessageExtra> {
+    fn handle(&self, _node: &Rc<RefCell<Node>>, _req: &Message) -> Option<MessageExtra> {
         None
     }
 }

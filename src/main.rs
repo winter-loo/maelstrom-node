@@ -7,12 +7,15 @@ use messages::*;
 use node::*;
 
 use std::io::{self, BufRead};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 fn main() {
     let stdin = io::stdin().lock();
 
-    let mut node = Node::new();
-    node.start_broadcast_loop();
+    let node = Node::new();
+    let node = Rc::new(RefCell::new(node));
+    node.borrow_mut().start_broadcast_loop();
 
     let router: Vec<Box<dyn MessageHandler>> = vec![
         Box::new(InitHandler),
@@ -39,8 +42,8 @@ fn main() {
                 }
                 match serde_json::from_str::<Message>(&content) {
                     Ok(msg) => {
-                        if let Some(response) = node.handle_message(&msg, &router) {
-                            node.send(response);
+                        if let Some(response) = Node::handle_message(node.clone(),&msg, &router) {
+                            node.borrow_mut().send(response);
                         }
                     }
                     Err(err) => eprintln!("invalid json data for message: {}", err),

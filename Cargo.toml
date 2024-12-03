@@ -12,6 +12,7 @@ uuid = { version = "1.11.0", features = ["v4"] }
 
 [features]
 lin_kv = []
+# default = ["lin_kv"]
 
 [[bin]]
 name = "maelstrom-node"

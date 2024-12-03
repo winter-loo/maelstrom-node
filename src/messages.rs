@@ -81,8 +81,8 @@ pub struct KvReadOkExtra {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KvWriteExtra {
-    pub key: usize,
-    pub value: usize,
+    pub key: serde_json::Value,
+    pub value: serde_json::Value,
 }
 
 /// Atomically compare-and-sets a single key:
