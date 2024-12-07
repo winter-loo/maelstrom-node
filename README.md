@@ -1,6 +1,8 @@
 # maelstrom-node
 
-see `git log` for development history
+see `git log` for development history.
+
+Before testing, install the [prerequisites](https://github.com/jepsen-io/maelstrom/blob/main/doc/01-getting-ready/index.md#prerequisitess).
 
 # debugging tips
 
@@ -59,6 +61,14 @@ reference:
 
 
 ## Challenge #7c: persistent trees
+
+The problem:
+
+> We got to a strict-serializable solution by cramming the *entire database*
+> into a single key in a linearizable key-value store. That... works, but it
+> might be inefficient. In particular, that state is constantly growing over
+> time, and that means our transactions get slower and slower over time--
+> just from having to **serialize and deserialize an ever-larger state**
 
 In this challenge, we store the pair (k, id) instead of (k, values) and the id
 points to the values.
