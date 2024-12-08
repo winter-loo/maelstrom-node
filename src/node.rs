@@ -107,6 +107,7 @@ impl Node {
             },
         };
         println!("{}", serde_json::to_string(&req).unwrap());
+        eprintln!("sent to lin-kv: {}", serde_json::to_string(&req).unwrap());
         let mut line = String::new();
         std::io::stdin().lock().read_line(&mut line).unwrap();
         eprintln!("received from lin-kv: {}", line);

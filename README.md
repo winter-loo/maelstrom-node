@@ -81,3 +81,4 @@ reference:
   * https://github.com/jepsen-io/maelstrom/blob/main/doc/05-datomic/03-persistent-trees.md
   * https://www.thecodedmessage.com/posts/oop-3-inheritance/
   * https://winter-loo.notion.site/code-reuse-151763aede9c8029a6bccfe7517d0975
+  * https://github.com/jepsen-io/maelstrom/tree/main/demo/java/src/main/java/maelstrom/txnListAppend

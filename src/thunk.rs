@@ -1,10 +1,45 @@
-use serde::{Deserialize, Serialize};
-
 use crate::idgen::IdGen;
 use crate::messages::*;
 use crate::node::Node;
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::rc::Rc;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(untagged)]
+pub enum LazyValue<T> {
+    #[default]
+    UnLoaded,
+    Loading,
+    LoadFailed,
+    Loaded(T),
+}
+
+impl<T> LazyValue<T> {
+    pub fn value(&self) -> Option<&T> {
+        match self {
+            LazyValue::Loaded(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn value_mut(&mut self) -> Option<&mut T> {
+        match self {
+            LazyValue::Loaded(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn get_or_insert_with<F>(&mut self, f: F) -> Option<&T>
+    where
+        F: FnOnce() -> LazyValue<T>,
+    {
+        if let LazyValue::UnLoaded = self {
+            *self = f();
+        }
+        self.value()
+    }
+}
 
 /// A Thunk is essentially a lazy loading mechanism for storing
 /// and retrieving values.
@@ -12,9 +47,9 @@ use std::rc::Rc;
 pub struct Thunk<T> {
     // shared references to Node
     pub node: Rc<RefCell<Node>>,
-    pub id: Option<String>,
-    pub value: Option<T>,
-    pub dirty: bool,
+    pub id: RefCell<LazyValue<String>>,
+    pub value: RefCell<LazyValue<T>>,
+    pub dirty: RefCell<bool>,
 }
 
 impl<T: Serialize> Serialize for Thunk<T> {
@@ -22,7 +57,7 @@ impl<T: Serialize> Serialize for Thunk<T> {
     where
         S: serde::Serializer,
     {
-        self.id.serialize(serializer)
+        self.id.borrow().serialize(serializer)
     }
 }
 
@@ -33,67 +68,98 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Thunk<T> {
     {
         Ok(Thunk {
             node: Default::default(), // should be set by the caller
-            id: Some(String::deserialize(deserializer)?),
-            value: None,
-            dirty: false,
+            id: RefCell::new(LazyValue::Loaded(String::deserialize(deserializer)?)),
+            value: RefCell::new(LazyValue::UnLoaded),
+            dirty: RefCell::new(false),
         })
     }
 }
 
-// high-ranked trait bounds
-impl<T: Clone + Default + Serialize +  for<'de> Deserialize<'de>> Thunk<T> {
+impl<T: Clone + Default + Serialize + for<'de> Deserialize<'de>> Thunk<T> {
     const SVC: &'static str = "lin-kv";
 
-    pub fn id(&mut self) -> &str {
-        if self.id.is_none() {
-            self.id = Some(IdGen::new(&self.node.borrow()).next_id());
+    pub fn new(node: Rc<RefCell<Node>>) -> Self {
+        Self {
+            node,
+            id: RefCell::new(LazyValue::UnLoaded),
+            value: RefCell::new(LazyValue::UnLoaded),
+            dirty: RefCell::new(false),
         }
-        self.id.as_ref().unwrap()
     }
 
-    pub fn value(&mut self) -> &mut T {
-        if self.value.is_none() {
-            let id = self.id().to_string();
-            let res = self.node.borrow_mut().sync_rpc(
+    pub fn id(&self) -> Option<String> {
+        let mut id_ref = self.id.borrow_mut();
+        if matches!(*id_ref, LazyValue::UnLoaded) {
+            *id_ref = LazyValue::Loaded(IdGen::new(&self.node.borrow()).next_id());
+        }
+        id_ref.value().cloned()
+    }
+
+    pub fn value(&self) -> Option<T> {
+        let id = self.id();
+        if id.is_none() {
+            return None;
+        }
+        let node = self.node.clone();
+        self.value.borrow_mut().get_or_insert_with(|| {
+            let res = node.borrow_mut().sync_rpc(
                 Self::SVC,
                 MessageExtra::KvRead(KvReadExtra { key: id.into() }),
             );
-            self.value = match res {
+            match res {
                 MessageExtra::KvReadOk(p) => {
-                    Some(Thunk::from_json(p.value))
+                    LazyValue::Loaded(serde_json::from_value(p.value).unwrap())
                 }
-                MessageExtra::Error(_) => Some(T::default()),
-                _ => panic!("wrong message type"),
-            };
+                MessageExtra::Error(_) => LazyValue::LoadFailed,
+                _ => {
+                    eprintln!("wrong message type, {res:?}");
+                    LazyValue::LoadFailed
+                }
+            }
+        }).cloned()
+    }
+
+    pub fn set_value(&mut self, value: T) {
+        if !*self.dirty.borrow() {
+            self.id = RefCell::new(LazyValue::UnLoaded);
+            let _ = self.id();
         }
-        self.value.as_mut().unwrap()
+        *self.value.borrow_mut() = LazyValue::Loaded(value);
+        *self.dirty.borrow_mut() = true;
     }
 
-    pub fn value_ref(&self) -> &T {
-        self.value.as_ref().unwrap()
+    pub fn dirty(&self) -> bool {
+        *self.dirty.borrow()
     }
 
-    pub fn save(&mut self) -> Result<(), MessageExtra> {
-        if self.dirty {
-            let id = self.id(); // mutable borrow 1
-                                // must clone the string to avoid the borrow checker complaining
-                                // about more than one mutable borrow
-            let id_clone = id.to_string();
+    pub fn merge(&mut self, merge_fn: impl FnOnce(&mut T) -> bool) -> bool {
+        let mut value = self.value.borrow_mut();
+        if let Some(v) = value.value_mut() {
+            if merge_fn(v) {
+                *self.dirty.borrow_mut() = true;
+                // update id
+                self.id = RefCell::new(LazyValue::UnLoaded);
+                self.id();
+            }
+            true
+        } else {
+            false
+        }
+    }
 
-            // after clone, the mutable borrow 1 is dropped, so we can
-            // use the immutable borrow 2
-
+    pub fn save(&self) -> Result<(), MessageExtra> {
+        if self.dirty() {
+            let id = self.id();
             let value = self.to_json();
             let res = self.node.borrow_mut().sync_rpc(
-                // mutable borrow 2
                 Self::SVC,
                 MessageExtra::KvWrite(KvWriteExtra {
-                    key: id_clone.into(),
+                    key: id.into(),
                     value,
                 }),
             );
             if matches!(res, MessageExtra::KvWriteOk) {
-                self.dirty = false;
+                *self.dirty.borrow_mut() = false;
                 Ok(())
             } else {
                 Err(res)
@@ -103,7 +169,7 @@ impl<T: Clone + Default + Serialize +  for<'de> Deserialize<'de>> Thunk<T> {
         }
     }
 
-    pub fn to_json(&mut self) -> serde_json::Value {
+    pub fn to_json(&self) -> serde_json::Value {
         serde_json::to_value(self.value()).unwrap()
     }
 

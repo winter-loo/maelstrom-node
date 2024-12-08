@@ -12,6 +12,9 @@ uuid = { version = "1.11.0", features = ["v4"] }
 
 [features]
 lin_kv = []
+# Turn on this if you edit rust code in neovim.
+# Otherwise, you could not get LSP features in neovim.
+# No better method yet. If you know, tell me. Thanks!
 # default = ["lin_kv"]
 
 [[bin]]
