@@ -77,8 +77,10 @@ In the first step, we refacot the code to use `Rc<RefCell<Node>>`.
 
 In the second step, we use **composition** and **generics** to structure the code instead of inheritance used in Ruby.
 
+In the previous two steps, I can not see any latency reduction. Maybe its implementation is too complex and error-prone. So I reimplmented this challenge per [java txnListAppend][4].
+
 reference:
   * https://github.com/jepsen-io/maelstrom/blob/main/doc/05-datomic/03-persistent-trees.md
   * https://www.thecodedmessage.com/posts/oop-3-inheritance/
   * https://winter-loo.notion.site/code-reuse-151763aede9c8029a6bccfe7517d0975
-  * https://github.com/jepsen-io/maelstrom/tree/main/demo/java/src/main/java/maelstrom/txnListAppend
+  * [4]: https://github.com/jepsen-io/maelstrom/tree/main/demo/java/src/main/java/maelstrom/txnListAppend

@@ -29,7 +29,9 @@ c6c_command="$command_prefix -w txn-rw-register --node-count 2 --concurrency 2n 
 command_prefix="maelstrom/maelstrom test --bin target/debug/maelstrom-txn"
 c7a_command="$command_prefix -w txn-list-append --node-count 1 --time-limit 10"
 c7b_command="$command_prefix -w txn-list-append --node-count 2 --time-limit 10 --rate 100"
+c7c_command_debug="$command_prefix -w txn-list-append --node-count 2 --time-limit 5 --rate 5"
 c7c_command="$command_prefix -w txn-list-append --node-count 2 --time-limit 10 --rate 100"
+c7c_command_perf="$command_prefix -w txn-list-append --node-count 2 --time-limit 20 --rate 200"
 
 if [ "$(uname)" == "Darwin" ]; then
     # use arrays for macos because bash doesn't support associative arrays

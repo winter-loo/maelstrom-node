@@ -1,7 +1,7 @@
 use crate::messages::*;
 use crate::node::*;
 #[cfg(feature = "lin_kv")]
-use crate::transactor::Transactor;
+use crate::Transactor;
 use std::cell::RefCell;
 use std::rc::Rc;
 use uuid::Uuid;
