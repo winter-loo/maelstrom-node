@@ -31,7 +31,7 @@ c7a_command="$command_prefix -w txn-list-append --node-count 1 --time-limit 10"
 c7b_command="$command_prefix -w txn-list-append --node-count 2 --time-limit 10 --rate 100"
 c7c_command_debug="$command_prefix -w txn-list-append --node-count 2 --time-limit 5 --rate 5"
 c7c_command="$command_prefix -w txn-list-append --node-count 2 --time-limit 10 --rate 100"
-c7c_command_perf="$command_prefix -w txn-list-append --node-count 2 --time-limit 20 --rate 200"
+c7c_command_perf="$command_prefix -w txn-list-append --node-count 4 --time-limit 60 --rate 200"
 
 if [ "$(uname)" == "Darwin" ]; then
     # use arrays for macos because bash doesn't support associative arrays
@@ -53,6 +53,8 @@ if [ "$(uname)" == "Darwin" ]; then
         "c7a:$c7a_command"
         "c7b:$c7b_command"
         "c7c:$c7c_command"
+        "c7c_debug:$c7c_command_debug"
+        "c7c_perf:$c7c_command_perf"
     )
 else
     declare -A tests
@@ -73,6 +75,8 @@ else
     tests["c7a"]="$c7a_command"
     tests["c7b"]="$c7b_command"
     tests["c7c"]="$c7c_command"
+    tests["c7c_debug"]="$c7c_command_debug"
+    tests["c7c_perf"]="$c7c_command_perf"
 fi
 
 if [ "$#" -eq 0 ]; then
@@ -116,7 +120,7 @@ else
   fi
 fi
 
-if [ "$1" = "c7b" ] || [ "$1" = "c7c" ]
+if [ "$1" = "c7b" ] || [[ "$1" =~ ^c7c ]]
 then
   cargo build --bin maelstrom-txn --features lin_kv
 else
