@@ -86,7 +86,7 @@ and [java implementation][2] still read the whole database keys from lin-kv stor
 the serialization/deserialization IO, I choose to partition all keys by range. The range
 partition strategy is controled by the function `part_key`.
 
-Here's the latency for a not yet unoptimized maelstrom-txn:
+Here's the latency for a not yet optimized maelstrom-txn:
 
 ![latency raw](./latency-raw.png)
 
