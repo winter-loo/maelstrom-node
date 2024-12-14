@@ -86,6 +86,10 @@ and [java implementation][2] still read the whole database keys from lin-kv stor
 the serialization/deserialization IO, I choose to partition all keys by range. The range
 partition strategy is controled by the function `part_key`.
 
+Here's the latency for a not yet unoptimized maelstrom-txn:
+
+![latency raw](./latency-raw.png)
+
 To see the crux of the latency, I used [flamegraph-rs][3]. You can repeat the process by
 executing the following commands(on macos):
 
@@ -108,6 +112,10 @@ see that the program spends much more time on `std::io::stdio::_eprint`.
 After applying the range partition optimization, the IO is much reduced.
 
 ![new flamegraph result](./flamegraph-optimized.svg)
+
+And here's the latency for optimized maelstrom-txn:
+
+![latency raw optimized](./latency-raw-optimized.png)
 
 Furthur optimizations like the [java implementation][2]:
   * use asynchronous IO with lin-kv
